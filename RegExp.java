@@ -91,6 +91,8 @@ public class RegExp {
 	 */
 	public void RegExpToNFA(String regexp){
 		System.out.println("Inside RegExpToNFA method.");
+		//General procedure: Split RegExp to multiple NFAs and then start combining them
+		//Cases: Single letter, concatenation, 
 		
 	}
 	
@@ -173,7 +175,7 @@ public class RegExp {
 
 					result = result + pathIterator.next().pathDescription()
 							+ eol;
-				}
+			}
 			}
 			result = result + "Accept states: ";
 			for (int i = 0; i < accepts.length; i++) {
