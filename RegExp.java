@@ -11,10 +11,14 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Scanner;
+import java.util.Stack;
+
+
 
 
 public class RegExp {
@@ -24,12 +28,15 @@ public class RegExp {
 	static File writeToMeFile; // File we are writing to
 	static FileWriter fw; // file writer for file
 	static BufferedWriter bw; // buffered writer for file
-
+	static char[] globalAlphabet;
+	static int stateCounter = 1;
+	static File thisFile;
 	static String[] acceptarr; // the array of accept states
 	private static ArrayList<State> states; // array list that holds all of the states
+	static ArrayList<NFADescription> nfaList = new ArrayList<NFADescription>();
 
 	// main method
-	public static void main(String[] args) throws FileNotFoundException {
+	public static void main(String[] args) throws IOException {
 		Scanner input; // scans reFile file
 		input = new Scanner(System.in);
 
@@ -65,14 +72,14 @@ public class RegExp {
 		input.close();
 	}
 	
-	public RegExp(File file) throws FileNotFoundException{
+	public RegExp(File file) throws IOException{
 		Scanner regExpInput = new Scanner(file);
-		NFADescription newNFA = new NFADescription();
+	//	NFADescription newNFA = new NFADescription();
 		states = new ArrayList<State>(); // creates states list
 		
 		String chars = regExpInput.next(); // reads in the alphabet
-		char[] alphabet = chars.toCharArray(); // puts alphabet into array
-		newNFA.setAlphabet(alphabet);
+		globalAlphabet = chars.toCharArray(); // puts alphabet into array
+	//	newNFA.setAlphabet(globalAlphabet);
 		
 		/** this print line makes sure the alphabet is read in correctly. **/
 		/*for(int i = 0; i < alphabet.length; i++){
@@ -88,13 +95,168 @@ public class RegExp {
 	 * This is the method that is going to do the actual conversion
 	 * of a regular expression to an NFA. It takes in a string version of
 	 * the regular expression, does work to it, then produces an NFA.
+	 * @throws IOException 
 	 */
-	public void RegExpToNFA(String regexp){
+	public NFADescription RegExpToNFA(String regexp) throws IOException{
 		System.out.println("Inside RegExpToNFA method.");
-		//General procedure: Split RegExp to multiple NFAs and then start combining them
-		//Cases: Single letter, concatenation, 
 		
+		Stack<Character> charStack = new Stack<Character>();
+		char[] charArray = regexp.toCharArray();
+		String temp = "";
+		for(int i = 0; i < charArray.length; i++) {
+			
+			if(charArray[i] != ')') {
+				charStack.push(charArray[i]);
+			}
+			
+			if(charArray[i] == ')'){
+				while(charStack.peek() != '(' ) {
+					temp = charStack.pop() + temp;
+				}
+				//Pop the '('
+				charStack.pop();
+				System.out.println("temp " + temp);
+			}
+			
+			char[] charArray1 = temp.toCharArray();
+		
+			for(int j = 0; j < charArray1.length; j++) {				
+				if(charArray1[j] != 'o' || charArray1[j] != 'U' || 
+				   charArray1[j] != 'N' || charArray1[j] != 'e' || 
+				   charArray1[j] !=  '*') {
+					nfaList.add(createNFA(charArray1[j]));
+				}
+			}
+			temp = "";
+			
+		} // end of for loop
+		
+		
+		
+		return null;
 	}
+	
+	public NFADescription createNFA(char transition) throws IOException{
+		int startState = stateCounter;
+		
+		int i = 1;
+		File writeToThisFile = new File ("newFile");
+		fw = new FileWriter(writeToThisFile, false);
+		bw = new BufferedWriter(fw);
+
+		String result = null;
+		String eol = System.getProperty("line.separator");
+
+		bw.write("2" + eol); // number of states
+		String stringAlphabet = new String(globalAlphabet);
+		bw.write(stringAlphabet + eol); // alphabet
+
+		bw.write("" + stateCounter + " '" + transition + "' " + (stateCounter+ 1) + eol);
+		stateCounter++;
+		bw.write(eol);
+		
+		bw.write(startState + eol); // start state 
+		bw.write(stateCounter); 
+	
+		bw.flush();
+		bw.close();
+		
+		return NFACreator(writeToThisFile);
+	}
+	
+	public NFADescription NFACreator(File file) throws FileNotFoundException{
+
+		// Create an NFA object
+		NFADescription newNFA = new NFADescription();
+		Scanner stateInput = new Scanner(file); // reads file
+		states = new ArrayList<State>(); // creates states list
+
+		int numOfStates = stateInput.nextInt(); // reads in # of states
+
+		String chars = stateInput.next(); // reads in the alphabet
+
+		char[] alphabet = chars.toCharArray(); // puts alphabet into array
+		newNFA.setAlphabet(alphabet);
+
+		n = 1;
+		while (n != (numOfStates + 1)) {
+			String str = "" + n;
+			State newState = new State(str);
+			states.add(newState);
+			// Add the state to its own list of current states
+			newState.addState(newState);
+			newNFA.addState(newState);
+			n++;
+		}
+
+		// read transitions
+		n = 0;
+		String a;
+		String b;
+		String c;
+		char bb;
+		State aa = null;
+		State cc = null;
+		String line;
+		line = stateInput.nextLine();
+		while (true) {
+			line = stateInput.nextLine();
+			// Break out of the while loop when a blank line is read
+			if (line.length() == 0) {
+				break;
+			}
+
+			Scanner lineReader = new Scanner(line);
+
+			a = lineReader.next(); // should be start state
+			b = lineReader.next(); // should be transition
+			c = lineReader.next(); // should be end state
+
+			// turns strings into states
+			aa = findState(newNFA, a);
+			cc = findState(newNFA, c);
+
+			// removes '' from around the alphabet path token
+			String trans = b.replaceAll("'", ""); // Trim out the '
+			bb = trans.charAt(0); // turn into a single character
+
+			Path transition = new Path(aa, cc, bb); // create a transition that
+													// begins with a state and
+													// end state
+			aa.pathList.add(transition); // is a linked list we are adding to
+			n++;
+			lineReader.close();
+		}
+
+		String startState = stateInput.nextLine(); // get start state
+		newNFA.setStart(startState);
+		findState(newNFA, startState);
+
+		n = 0;
+		String z;
+		stateInput.useDelimiter("\n"); // change delimiter so we can read accept
+										// states
+
+		z = stateInput.next();
+		Scanner scanny = new Scanner(z); // used to count # of tokens in line
+		Scanner scanny1 = new Scanner(z); // used to extract tokens in line
+
+		while (scanny.hasNextInt()) {
+			scanny.nextInt();
+			n++; // returns # of accept states so we can create an array of
+					// length n
+		}
+
+		acceptarr = new String[n]; // create list of accept states
+
+		for (int i = 0; i < acceptarr.length; i++) {
+			z = scanny1.next(); // extracts the tokens
+			acceptarr[i] = z; // puts them into the array
+			newNFA.setAccepts(acceptarr);
+		}
+		return newNFA;
+	}
+	
 	
 	/**
 	 * This is the method that is going to convert the NFA
