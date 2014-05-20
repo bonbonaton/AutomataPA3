@@ -120,11 +120,29 @@ public class RegExp {
 			
 			char[] charArray1 = temp.toCharArray();
 		
+			//TODO: Peek at next character to see if it's a *. Then we know that the NFA that gets created needs to be a * nfa.
+			
 			for(int j = 0; j < charArray1.length; j++) {				
 				if(charArray1[j] != 'o' || charArray1[j] != 'U' || 
 				   charArray1[j] != 'N' || charArray1[j] != 'e' || 
 				   charArray1[j] !=  '*') {
-					nfaList.add(createNFA(charArray1[j]));
+					nfaList.add(createNFANormal(charArray1[j]));
+				}
+				else if(charArray[j] == 'o') {
+					//Concatenate the next created NFA with the last created NFA
+				}
+				else if(charArray[j] == 'U') {
+					//Epsilon transition from the last NFA's start state to the next created NFA's start state
+				}
+				else if(charArray[j] == 'N') {
+					//?
+				}
+				else if(charArray[j] == 'e') {
+					//NFA whose start state is also its accept state.
+					createNFAEpsilon(charArray[j]);
+				}
+				else if(charArray[j] == '*') {
+					//Take the last created NFA and star it.
 				}
 			}
 			temp = "";
@@ -135,8 +153,16 @@ public class RegExp {
 		
 		return null;
 	}
-	
-	public NFADescription createNFA(char transition) throws IOException{
+	public NFADescription joinNFAs(NFADescription first, NFADescription second) throws IOException {
+		int startState = Integer.parseInt(first.start); //Start state is the first NFA's start state
+		
+		//Need to create a transition from the accept state of the first NFa to the second NFA
+		
+		
+		
+		
+	}
+	public NFADescription createNFANormal(char transition) throws IOException{
 		int startState = stateCounter;
 		
 		int i = 1;
@@ -156,11 +182,36 @@ public class RegExp {
 		bw.write(eol);
 		
 		bw.write(startState + eol); // start state 
-		bw.write(stateCounter); 
+		bw.write(stateCounter); //accept state
 	
 		bw.flush();
 		bw.close();
 		
+		return NFACreator(writeToThisFile);
+	}
+	
+	public NFADescription createNFAEpsilon(char transition) throws IOException {
+		int startState = stateCounter;
+		int i = 1;
+		File writeToThisFile = new File("newFile");
+		fw = new FileWriter(writeToThisFile, false);
+		bw = new BufferedWriter(fw);
+		String result = null;
+		String eol = System.getProperty("line.separator");
+		
+		bw.write("2" + eol);//# of states
+		String stringAlphabet = new String(globalAlphabet);
+		bw.write(stringAlphabet+eol);//Alphabet
+		
+		bw.write("" + stateCounter + " '" + transition + "' " + (stateCounter+1) + eol);
+		stateCounter++;
+		bw.write(eol);
+		
+		bw.write(startState + eol); //start state
+		bw.write(startState);//accept state
+		
+		bw.flush();
+		bw.close();
 		return NFACreator(writeToThisFile);
 	}
 	
