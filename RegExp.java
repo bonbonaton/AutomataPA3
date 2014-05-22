@@ -99,71 +99,305 @@ public class RegExp {
 	 */
 	public NFADescription RegExpToNFA(String regexp) throws IOException{
 		System.out.println("Inside RegExpToNFA method.");
+		int nfaCounter  = 1;
 		
 		Stack<Character> charStack = new Stack<Character>();
 		char[] charArray = regexp.toCharArray();
 		String temp = "";
 		for(int i = 0; i < charArray.length; i++) {
+			System.out.println("charArray[" + i + "]: " + charArray[i]);
 			
-			if(charArray[i] != ')') {
+			if(charArray[i] == '('){
 				charStack.push(charArray[i]);
 			}
-			
-			if(charArray[i] == ')'){
-				while(charStack.peek() != '(' ) {
-					temp = charStack.pop() + temp;
+			else if(charArray[i] == ')'){
+				System.out.println("peek at top of stack: " + charStack.peek());
+				if(charStack.peek() == '('){
+					charStack.pop();
 				}
-				//Pop the '('
-				charStack.pop();
-				System.out.println("temp " + temp);
+				
+				else if(charStack.peek() == 'o'){
+					System.out.println("concatenating...");
+					// create concatenation
+					int last = nfaList.size();
+					NFADescription two = nfaList.get(last-1);
+					NFADescription one = nfaList.get(last-2);
+					NFADescription concatenated = createConcatenation(one,two);
+					nfaList.remove(last-1);
+					nfaList.remove(last-2);
+					nfaList.add(concatenated);
+					System.out.println("nfaList size: " + nfaList.size());
+				}
+				else if(charStack.peek() == 'U'){
+					// create union
+					System.out.println("unionizing...");
+					int last = nfaList.size();
+					NFADescription two = nfaList.get(last-1);
+					NFADescription one = nfaList.get(last-2);
+					NFADescription uniond = createUnion(one,two);
+					nfaList.remove(last-1);
+					nfaList.remove(last-2);
+					nfaList.add(uniond);
+					System.out.println("nfaList size: " + nfaList.size());
+				}
+				charStack.push(charArray[i]);
+				
+			}
+			else if(charArray[i] == 'o'){
+				System.out.println("pushing concatenation symbol");
+				// want to concatenate the most recently created nfa (the latest one on nfaList)
+				// and add it to the upcoming nfa
+				charStack.push(charArray[i]); // push o
+				
+			}
+			else if(charArray[i] == 'U'){
+				System.out.println("pushing union symbol");
+				// want to union the most recently created nfa (the latest one on nfaList)
+				// and add it to the upcoming nfa
+				charStack.push(charArray[i]); // push U
+				
+			}
+			else if(charArray[i] == 'N'){
+				
+			}
+			else if(charArray[i] == 'e'){
+				
+			}
+			else if(charArray[i] == '*'){
+				if(charStack.peek() == ')'){
+					
+					System.out.println("staring...");
+					int last = nfaList.size();
+					NFADescription starMe = nfaList.get(last-1);
+					NFADescription stared = createStar(starMe);
+					nfaList.remove(last-1);
+					nfaList.add(stared);
+					System.out.println("nfaList size: " + nfaList.size());
+				}	
 			}
 			
-			char[] charArray1 = temp.toCharArray();
-		
-			//TODO: Peek at next character to see if it's a *. Then we know that the NFA that gets created needs to be a * nfa.
+			else{ // must be a single number
+					
+				for(int k = 0; k < globalAlphabet.length; k++){
+						if(charArray[i] == globalAlphabet[k]){
+						
+							if(i < charArray.length-1 && charArray[i+1] == '*'){
+								System.out.println("making star nfa");
+								nfaList.add(createNFAStar(charArray[i])); // create nfa of a single char and star it *
+								//charStack.push('&'); // by pushing an & we push a spot holder indicating an nfa has been created from the char that was here
+							}
+							else{
+							System.out.println("creating nfa for a single number");
+							// create nfa of a single char 1 or 2
+							nfaList.add(createNFANormal(charArray[i])); 
+							//charStack.push('&'); // by pushing an & we push a spot holder indicating an nfa has been created from the char that was here
+							}
+						}
+				} // closes for loop
+				
+					
+					System.out.println("peek at top of stack: " + charStack.peek());
+					if(charStack.peek() == 'o'){
+						charStack.pop();
+						System.out.println("concatenating...");
+						// create concatenation
+						int last = nfaList.size();
+						NFADescription two = nfaList.get(last-1);
+						NFADescription one = nfaList.get(last-2);
+						NFADescription concatenated = createConcatenation(one,two);
+						nfaList.remove(last-1);
+						nfaList.remove(last-2);
+						nfaList.add(concatenated);
+						System.out.println("nfaList size: " + nfaList.size());
+					}
+					else if(charStack.peek() == 'U'){
+						// create union
+						charStack.pop();
+						System.out.println("unionizing...");
+						int last = nfaList.size();
+						NFADescription two = nfaList.get(last-1);
+						NFADescription one = nfaList.get(last-2);
+						NFADescription uniond = createUnion(one,two);
+						nfaList.remove(last-1);
+						nfaList.remove(last-2);
+						nfaList.add(uniond);
+						System.out.println("nfaList size: " + nfaList.size());
+					}
+					
+			} // closes else loop
 			
-			for(int j = 0; j < charArray1.length; j++) {				
-				if(charArray1[j] != 'o' || charArray1[j] != 'U' || 
-				   charArray1[j] != 'N' || charArray1[j] != 'e' || 
-				   charArray1[j] !=  '*') {
-					nfaList.add(createNFANormal(charArray1[j]));
-				}
-				else if(charArray[j] == 'o') {
-					//Concatenate the next created NFA with the last created NFA
-				}
-				else if(charArray[j] == 'U') {
-					//Epsilon transition from the last NFA's start state to the next created NFA's start state
-				}
-				else if(charArray[j] == 'N') {
-					//?
-				}
-				else if(charArray[j] == 'e') {
-					//NFA whose start state is also its accept state.
-					createNFAEpsilon(charArray[j]);
-				}
-				else if(charArray[j] == '*') {
-					//Take the last created NFA and star it.
-				}
-			}
-			temp = "";
 			
-		} // end of for loop
-		
-		
+		}
+
 		
 		return null;
 	}
-	public NFADescription joinNFAs(NFADescription first, NFADescription second) throws IOException {
-		int startState = Integer.parseInt(first.start); //Start state is the first NFA's start state
+	
+
+	private NFADescription createStar(NFADescription starMe) throws IOException {
+		int start = 1;
+		int numOfStates = starMe.states.size() + 1;
 		
-		//Need to create a transition from the accept state of the first NFa to the second NFA
+		int i = 1;
+		File writeToThisFile = new File ("newFile");
+		fw = new FileWriter(writeToThisFile, false);
+		bw = new BufferedWriter(fw);
+
+		String result = "";
+		String eol = System.getProperty("line.separator");
+
+		bw.write(numOfStates + eol); // number of states
+		String stringAlphabet = new String(globalAlphabet);
+		bw.write(stringAlphabet + eol); // alphabet
+
+		bw.write("" + start + " 'e' " + starMe.start + eol);
 		
+		Iterator<State> listIterator = starMe.states.listIterator();
+		while (listIterator.hasNext()) {
+			Iterator<Path> pathIterator = listIterator.next().pathList
+					.listIterator();
+			while (pathIterator.hasNext()) {
+				result = pathIterator.next().pathDescription() + eol;
+				bw.write(result);
+			}
+		}
 		
+		for(int l = 0; l < starMe.accepts.length; l++){
+			bw.write("" + starMe.accepts[l] + " 'e' " + starMe.start + eol);
+		}
 		
+		bw.write(eol);
+		
+		bw.write(start + eol); // start state
+		for(int k = 0; k < starMe.accepts.length; k++){
+			bw.write(starMe.accepts[k]); //accept state
+		}
+	
+		bw.flush();
+		bw.close();
+		
+		return NFACreator(writeToThisFile);
 		
 	}
+
+	private NFADescription createConcatenation(NFADescription one, NFADescription two) throws IOException {
+		String startState = one.start.toString();
+		int start = Integer.parseInt(startState);
+		
+		int oneNumOfStates = one.states.size();
+		int twoNumOfStates = two.states.size();
+		int numOfStates = oneNumOfStates + twoNumOfStates;
+		
+		int i = 1;
+		File writeToThisFile = new File ("newFile");
+		fw = new FileWriter(writeToThisFile, false);
+		bw = new BufferedWriter(fw);
+
+		String result = "";
+		String eol = System.getProperty("line.separator");
+
+		bw.write(numOfStates + eol); // number of states
+		String stringAlphabet = new String(globalAlphabet);
+		bw.write(stringAlphabet + eol); // alphabet
+
+		
+		Iterator<State> listIterator = one.states.listIterator();
+		while (listIterator.hasNext()) {
+			Iterator<Path> pathIterator = listIterator.next().pathList
+					.listIterator();
+			while (pathIterator.hasNext()) {
+				result = pathIterator.next().pathDescription() + eol;
+				bw.write(result);
+			}
+		}
+		
+		for(int l = 0; l < one.accepts.length; l++){
+			bw.write("" + one.accepts[l] + " 'e' " + two.start + eol);
+		}
+		
+		listIterator = two.states.listIterator();
+		while (listIterator.hasNext()) {
+			Iterator<Path> pathIterator = listIterator.next().pathList
+					.listIterator();
+			while (pathIterator.hasNext()) {
+				result = pathIterator.next().pathDescription() + eol;
+				bw.write(result);
+			}
+		}
+		
+		bw.write(eol);
+		
+		bw.write(startState + eol); // start state
+		for(int k = 0; k < two.accepts.length; k++){
+			bw.write(two.accepts[k]); //accept state
+		}
+	
+		bw.flush();
+		bw.close();
+		
+		return NFACreator(writeToThisFile);
+		
+	}
+	
+	private NFADescription createUnion(NFADescription one, NFADescription two) throws IOException {
+		
+		int start = 1;
+		
+		int oneNumOfStates = one.states.size();
+		int twoNumOfStates = two.states.size();
+		int numOfStates = oneNumOfStates + twoNumOfStates + 1;
+		
+		int i = 1;
+		File writeToThisFile = new File ("newFile");
+		fw = new FileWriter(writeToThisFile);
+		bw = new BufferedWriter(fw);
+
+		String result = "";
+		String eol = System.getProperty("line.separator");
+
+		bw.write(numOfStates + eol); // number of states
+		String stringAlphabet = new String(globalAlphabet);
+		bw.write(stringAlphabet + eol); // alphabet
+
+		bw.write("" + start + " 'e' " + one.start + eol);
+		bw.write("" + start + " 'e' " + two.start + eol);
+		Iterator<State> listIterator = one.states.listIterator();
+		while (listIterator.hasNext()) {
+			Iterator<Path> pathIterator = listIterator.next().pathList
+					.listIterator();
+			while (pathIterator.hasNext()) {
+				result = pathIterator.next().pathDescription() + eol;
+				bw.write(result);
+			}
+		}
+		
+		listIterator = two.states.listIterator();
+		while (listIterator.hasNext()) {
+			Iterator<Path> pathIterator = listIterator.next().pathList
+					.listIterator();
+			while (pathIterator.hasNext()) {
+				result = pathIterator.next().pathDescription() + eol;
+				bw.write(result);
+			}
+		}
+		
+		bw.write(eol);
+		
+		bw.write(start + eol); // start state
+		for(int k = 0; k < two.accepts.length; k++){
+			bw.write(two.accepts[k]); //accept state
+		}
+	
+		bw.flush();
+		bw.close();
+		
+		return NFACreator(writeToThisFile);
+	}
+
+	
+	
 	public NFADescription createNFANormal(char transition) throws IOException{
-		int startState = stateCounter;
+		int startState = 1;
 		
 		int i = 1;
 		File writeToThisFile = new File ("newFile");
@@ -177,12 +411,12 @@ public class RegExp {
 		String stringAlphabet = new String(globalAlphabet);
 		bw.write(stringAlphabet + eol); // alphabet
 
-		bw.write("" + stateCounter + " '" + transition + "' " + (stateCounter+ 1) + eol);
-		stateCounter++;
+		bw.write("" + startState + " '" + transition + "' " + (startState + 1) + eol);
+		
 		bw.write(eol);
 		
 		bw.write(startState + eol); // start state 
-		bw.write(stateCounter); //accept state
+		bw.write("2"); //accept state
 	
 		bw.flush();
 		bw.close();
@@ -191,20 +425,20 @@ public class RegExp {
 	}
 	
 	public NFADescription createNFAEpsilon(char transition) throws IOException {
-		int startState = stateCounter;
+		int startState = 1;
 		int i = 1;
+		
 		File writeToThisFile = new File("newFile");
 		fw = new FileWriter(writeToThisFile, false);
 		bw = new BufferedWriter(fw);
 		String result = null;
 		String eol = System.getProperty("line.separator");
 		
-		bw.write("2" + eol);//# of states
+		bw.write("1" + eol);//# of states
 		String stringAlphabet = new String(globalAlphabet);
 		bw.write(stringAlphabet+eol);//Alphabet
 		
-		bw.write("" + stateCounter + " '" + transition + "' " + (stateCounter+1) + eol);
-		stateCounter++;
+		bw.write("" + startState + " '" + transition + "' " + startState + eol);
 		bw.write(eol);
 		
 		bw.write(startState + eol); //start state
@@ -214,6 +448,38 @@ public class RegExp {
 		bw.close();
 		return NFACreator(writeToThisFile);
 	}
+	
+	public NFADescription createNFAStar(char transition) throws IOException {
+		int startState = 1;
+		int i = 1;
+		File writeToThisFile = new File("newFile");
+		fw = new FileWriter(writeToThisFile, false);
+		bw = new BufferedWriter(fw);
+		String result = null;
+		String eol = System.getProperty("line.separator");
+		
+		bw.write("3" + eol); //# of states
+		String stringAlphabet = new String(globalAlphabet);
+		bw.write(stringAlphabet+eol);//Alphabet
+		
+		
+		bw.write(startState + " 'e' " + (startState + 1) + eol);
+		startState++;
+		bw.write("" + startState + " '" + transition + "' " + (startState+1) + eol);
+		startState++;
+		bw.write(startState + " 'e' " + (startState-1) + eol);
+		bw.write(eol);
+		
+		bw.write("1" + eol); //start state
+		bw.write("1 " + startState);//accept state
+		
+		bw.flush();
+		bw.close();
+		
+		return NFACreator(writeToThisFile);
+	}
+	
+	
 	
 	public NFADescription NFACreator(File file) throws FileNotFoundException{
 
